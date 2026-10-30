@@ -1,0 +1,3 @@
+/* ===== Démarrage ===== */
+route();
+gist.init();

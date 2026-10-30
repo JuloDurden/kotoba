@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Kotoba · Dojo de japonais</title>
+<meta name="description" content="Kotoba, un dojo de japonais façon Duolingo : vocabulaire par thèmes, hiragana, katakana et kanji, prononciation et jeux.">
+<meta name="theme-color" content="#3447A0">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%233447A0'/%3E%3Ctext x='32' y='45' font-size='36' text-anchor='middle' fill='white' font-family='sans-serif' font-weight='900'%3E言%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700;900&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header class="hdr" id="hdr"></header>
+<main class="app" id="app"></main>
+<nav class="tabbar" id="nav" aria-label="Navigation principale"><div class="in">
+  <a href="#parcours" data-v="parcours"><b>道</b>Parcours</a>
+  <a href="#caracteres-hira" data-v="caracteres"><b>字</b>Caractères</a>
+  <a href="#revisions" data-v="revisions"><b>復</b>Révisions</a>
+  <a href="#profil" data-v="profil"><b>私</b>Profil</a>
+</div></nav>
+
+<!-- Ordre de chargement : utilitaires, données, services, moteur, écrans -->
+<script src="js/core/utils.js"></script>
+<script src="js/data/themes.js"></script>
+<script src="js/data/scripts.js"></script>
+<script src="js/core/storage.js"></script>
+<script src="js/core/audio.js"></script>
+<script src="js/core/visuals.js"></script>
+<script src="js/learn/engine.js"></script>
+<script src="js/learn/draw.js"></script>
+<script src="js/ui/lesson.js"></script>
+<script src="js/ui/screens.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
