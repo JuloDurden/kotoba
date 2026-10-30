@@ -24,21 +24,21 @@ function render(){
   if(ex.type==="intro"){const v=ex.v;
     body=`<div class="intro">${pic(v.pic)}<div class="pjp">${esc(v.jp)}</div><div class="paid" style="align-items:center">${aid(v.jp,v.kana,v.ro,"pk")}</div><div class="fr">${esc(v.fr)}</div>${jaVoice?`<button class="spk" id="say" aria-label="Écouter">${SPK}</button>`:""}</div>`;
   }else if(ex.type==="kintro"){const x=ex.x,k=isKanji(ex.s);
-    body=`<div class="intro"><div class="huge">${esc(x.c)}</div>${k?`<div class="fr">${esc(x.fr)}</div><div class="pk">${esc(x.kana)}</div><div class="rom pk">${esc(x.ro)}</div>`:`<div class="fr rom" style="font-family:var(--f-mono)">${esc(x.ro)}</div><div class="small">${ex.s==="kata"?`Hiragana équivalent : ${esc(toHira(x.c))}`:`Katakana équivalent : ${esc(toKata(x.c))}`}</div>`}${jaVoice?`<button class="spk" id="say" aria-label="Écouter">${SPK}</button>`:""}</div>`;
+    body=`<div class="intro"><div class="huge">${esc(x.c)}</div>${k?`<div class="fr">${esc(x.fr)}</div><div class="pk">${esc(x.kana)}</div><div class="rom pk">${esc(x.ro)}</div>`:`<div class="fr rom" style="font-family:var(--f-mono)">${esc(x.ro)}</div><div class="small">${ex.s==="kata"?`Hiragana équivalent : ${esc(toHira(x.c))}`:`Katakana équivalent : ${esc(toKata(x.c))}`}</div>`}${jaVoice?`<button class="spk" id="say" aria-label="Écouter">${SPK}</button>`:""}</div>
+     ${(()=>{const W=wordsWith(ex.s,x.c).slice(0,3);return W.length?`<div class="exws"><span class="eyebrow">Dans les mots</span>${W.map(w=>`<button class="exw" data-say="${esc(w.say)}"><b>${w.w.split(x.c).map(esc).join(`<mark>${esc(x.c)}</mark>`)}</b><span>${esc(w.ro)} · ${esc(w.fr)}</span></button>`).join("")}</div>`:"";})()}`;
   }else if(ex.type==="mcq"){
     body=`${ex.listen?`<div class="prompt"><button class="spk big" id="play" aria-label="Réécouter">${SPK}</button><span class="small">Touche pour réécouter</span></div>`:""}
      ${ex.prompt?`<div class="prompt">${ex.prompt}${ex.speak&&jaVoice?`<button class="spk" id="say" aria-label="Écouter">${SPK}</button>`:""}</div>`:""}
      <div class="opts ${ex.two?"two":""} ${ex.pics?"pics":""}">${ex.options.map((o,i)=>`<button class="opt" data-v="${esc(o.val)}"><span class="num">${i+1}</span><span class="lab">${o.html}</span></button>`).join("")}</div>`;
   }else if(ex.type==="pairs"){
     const L1=shuffle(ex.items),R1=shuffle(ex.items);
-    body=`<div class="pairs"><div class="col">${L1.map(v=>`<button class="opt" data-side="l" data-k="${esc(v.k)}"><span class="lab">${v.l}</span></button>`).join("")}</div>
-     <div class="col">${R1.map(v=>`<button class="opt" data-side="r" data-k="${esc(v.k)}"><span class="lab">${v.r}</span></button>`).join("")}</div></div>`;
+    body=`<div class="pairs">${L1.map((v,i)=>`<button class="opt" data-side="l" data-k="${esc(v.k)}"><span class="lab">${v.l}</span></button><button class="opt" data-side="r" data-k="${esc(R1[i].k)}"><span class="lab">${R1[i].r}</span></button>`).join("")}</div>`;
   }else if(ex.type==="build"){
     const tl=ex.lang==="jp";
     body=`${tl?`<div class="bubble"><div class="pfr">${esc(ex.fr)}</div></div>`:`<div class="bubble">${sentHTML(ex.jp)}${jaVoice?`<button class="spk sm" id="say2" aria-label="Écouter">${SPK}</button>`:""}</div>`}
      <div class="line" id="line"></div>
-     <div class="bank" id="bank">${ex.tiles.map((t,i)=>`<button class="tile ${tl?"jp":""}" data-i="${i}">${tl?tileJP(t):esc(t)}</button>`).join("")}</div>
-     ${tl?`<button class="hint" id="hint">Afficher la lecture en kana</button><div class="hinttxt" id="hinttxt" hidden>${esc(ex.hint)}</div>`:""}`;
+     <div class="bank" id="bank">${ex.tiles.map((t,i)=>`<button class="tile ${tl?"jp":""}" data-i="${i}">${tl&&!ex.kana?tileJP(t):esc(t)}</button>`).join("")}</div>
+     ${tl&&ex.hint?`<button class="hint" id="hint">Afficher la lecture en kana</button><div class="hinttxt" id="hinttxt" hidden>${esc(ex.hint)}</div>`:""}`;
   }else if(ex.type==="type"){
     body=`<div class="prompt">${ex.prompt}</div><input class="inp" id="inp" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Tape en rōmaji, ex. : kyou"><div class="preview" id="pv" aria-live="polite"></div><div class="small">Pas besoin de clavier japonais : tape en lettres latines. Voyelles longues acceptées sous toutes les formes (ō, ou, o).</div>`;
   }else if(ex.type==="speak"){
@@ -46,7 +46,7 @@ function render(){
      ${SR.ok?`<div class="micbox"><button class="mic" id="mic" aria-label="Parler">${MIC}</button><div class="small" id="srs" aria-live="polite">Touche le micro, puis prononce ${ex.single?"le mot":"la phrase"} en japonais.</div><button class="hint" id="skip">Je ne peux pas parler maintenant</button></div>`
      :`<div class="small">Ce navigateur ne propose pas la reconnaissance vocale : écoute, répète à voix haute, puis continue. Avec Chrome, Edge ou Safari, ta prononciation est vérifiée.</div>`}`;
   }else if(ex.type==="draw"){
-    body=`<div class="padbox"><div class="padwrap" id="padwrap"><canvas id="cg"></canvas><canvas class="pad" id="cp" aria-label="Zone de tracé"></canvas></div><div class="btnrow"><button class="btn" id="undo">Annuler le trait</button><button class="btn" id="clr">Effacer</button>${jaVoice?`<button class="btn" id="say3">Écouter</button>`:""}</div></div>`;
+    body=`${ex.context||""}<div class="padbox"><div class="padwrap" id="padwrap"><canvas id="cg"></canvas><canvas class="pad" id="cp" aria-label="Zone de tracé"></canvas></div><div class="btnrow"><button class="btn" id="undo">Annuler le trait</button><button class="btn" id="clr">Effacer</button>${jaVoice?`<button class="btn" id="say3">Écouter</button>`:""}</div></div>`;
   }
   const isIntro=isFree(ex);
   const m=L.spec.mode;
@@ -67,6 +67,7 @@ function render(){
 function bind(ex){
   const go=$("#go");
   if($("#say"))$("#say").onclick=()=>speak(ex.speak);
+  document.querySelectorAll(".exw").forEach(b=>b.onclick=()=>speak(b.dataset.say));
   if(ex.type==="speak"){if($("#play")){$("#play").onclick=()=>speak(ex.say);$("#slow").onclick=()=>speak(ex.say,.55);}
     if(SR.ok){let tries=0,on=false;const mic=$("#mic"),msg=$("#srs");
       $("#skip").onclick=()=>{if(answered)return;answered=true;L.graded=Math.max(0,L.graded-1);next();};
@@ -95,7 +96,7 @@ function bind(ex){
     if($("#say2"))$("#say2").onclick=()=>speak(ex.say);
     $("#bank").querySelectorAll(".tile").forEach(t=>t.onclick=()=>{if(answered||t.classList.contains("ghost"))return;
       const i=+t.dataset.i;t.classList.add("ghost");chosen.push(i);
-      const c=document.createElement("button");c.className="tile"+(tl?" jp":"");c.innerHTML=tl?tileJP(ex.tiles[i]):esc(ex.tiles[i]);
+      const c=document.createElement("button");c.className="tile"+(tl?" jp":"");c.innerHTML=tl&&!ex.kana?tileJP(ex.tiles[i]):esc(ex.tiles[i]);
       if(tl){const r=info(ex.tiles[i]);if(r.kana)speak(r.kana);}
       c.onclick=()=>{if(answered)return;chosen.splice(chosen.indexOf(i),1);c.remove();t.classList.remove("ghost");go.disabled=!chosen.length;};
       line.appendChild(c);go.disabled=false;});
@@ -115,6 +116,7 @@ function mark(key,ok,s){
   if(!key)return;
   if(s&&SCR[s]&&SCR[s].list.some(x=>x.c===key)){const c=store.ch[s][key]??0;store.ch[s][key]=ok?Math.min(5,c+1):Math.max(0,c-1);return;}
   if(key.startsWith("s:")||!ALLV.some(v=>v.jp===key))return;
+  const w=store.wm[key]||0;store.wm[key]=ok?Math.min(5,w+1):Math.max(0,w-1);
   if(ok){if(store.weak[key]){store.weak[key]--;if(store.weak[key]<=0)delete store.weak[key];}}else store.weak[key]=(store.weak[key]||0)+1;
 }
 

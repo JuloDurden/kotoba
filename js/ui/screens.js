@@ -1,11 +1,12 @@
 /* ===== Écrans principaux et navigation ===== */
-const VERSION = "0.2.0";
+const VERSION = "0.3.0";
 const REPO_URL = "https://github.com/JuloDurden/kotoba";
 
 const UNITS = [
-  { t: "Les bases", d: "Compter, saluer, se repérer dans le temps", hue: "u1", th: ["nombres", "salutations", "jours", "heures"] },
-  { t: "Le quotidien", d: "Décrire, parler de soi et de ses proches", hue: "u2", th: ["couleurs", "saisons", "frequence", "famille", "nourriture"] },
-  { t: "Sortir et partager", d: "Lieux, tenues, voyages et loisirs", hue: "u3", th: ["lieux", "vetements", "transports", "pays", "arts", "sports"] }
+  { t: "Les bases", d: "Compter, saluer, se repérer dans le temps", hue: "u1", th: ["nombres", "salutations", "expressions", "jours", "heures"] },
+  { t: "Le quotidien", d: "Décrire, parler de soi, de ses proches et de chez soi", hue: "u2", th: ["couleurs", "saisons", "frequence", "famille", "corps", "nourriture", "maison"] },
+  { t: "Sortir et partager", d: "Ville, tenues, voyages et loisirs", hue: "u3", th: ["lieux", "ville", "vetements", "transports", "pays", "arts", "sports"] },
+  { t: "Culture", d: "Proverbes et expressions imagées", hue: "u4", th: ["proverbes"] }
 ];
 const unitOf = th => UNITS.find(u => u.th.includes(th)) || UNITS[0];
 
@@ -22,6 +23,7 @@ function route() {
   const h = (location.hash || "#parcours").slice(1);
   if (h.startsWith("theme-") && DATA[h.slice(6)]) { SCREEN = { name: "theme", th: h.slice(6) }; viewTheme(SCREEN.th); }
   else if (h.startsWith("caracteres")) { const s = h.split("-")[1]; SCREEN = { name: "chars", s: SCR[s] ? s : "hira" }; viewChars(SCREEN.s); }
+  else if (h.startsWith("fiche-") && DATA[h.slice(6)]) { SCREEN = { name: "fiche", th: h.slice(6) }; viewFiche(SCREEN.th); }
   else if (h === "revisions") { SCREEN = { name: "revisions" }; viewRevisions(); }
   else if (h === "profil") { SCREEN = { name: "profil" }; viewProfil(); }
   else { SCREEN = { name: "parcours" }; viewParcours(); }
@@ -35,7 +37,7 @@ function header() {
    <div class="chips"><span class="chip fire" title="Série de jours">${s ? "🔥" : "○"} ${s} j</span><span class="chip xp" title="Points d'expérience">${store.xp} XP</span></div>`;
 }
 function navState() {
-  const cur = { parcours: "parcours", theme: "parcours", chars: "caracteres", revisions: "revisions", profil: "profil" }[SCREEN.name];
+  const cur = { parcours: "parcours", theme: "parcours", fiche: "revisions", chars: "caracteres", revisions: "revisions", profil: "profil" }[SCREEN.name];
   document.querySelectorAll("#nav a").forEach(a => a.setAttribute("aria-current", a.dataset.v === cur ? "page" : "false"));
 }
 
@@ -68,7 +70,7 @@ function viewTheme(th) {
   const X = [0, 54, 84, 54, 0, -54, -84, -54];
   const icon = (l, st, i) => st === "done" ? "✓" : l.kind === "review" ? "復" : l.kind === "master" ? "★" : i + 1;
   $("#app").innerHTML = `<a class="back" href="#parcours">← Parcours</a>
-   <section class="thead ${u.hue}"><span class="tbadge big">${d.k}</span><div><span class="eyebrow">${u.t}</span><h2>${d.t}</h2><div class="small">${Math.min(p, ls.length)} / ${ls.length} leçons terminées</div></div></section>
+   <section class="thead ${u.hue}"><span class="tbadge big">${d.k}</span><div><span class="eyebrow">${u.t}</span><h2>${d.t}</h2><div class="small">${Math.min(p, ls.length)} / ${ls.length} leçons terminées</div></div><a class="btn fbtn" href="#fiche-${th}">Fiche</a></section>
    <div class="zz ${u.hue}">${ls.map((l, i) => {
      const st = i < p ? "done" : i === p ? "cur" : "lock";
      return `<div class="zrow" style="--x:${X[i % X.length]}px">${st === "cur" ? `<span class="bubble-go">${p ? "Continuer" : "Commencer"}</span>` : ""}
@@ -119,6 +121,8 @@ function viewRevisions() {
     <button class="rcard" id="mix" ${anyDone ? "" : "disabled"}><span class="rk">混</span><b>Révision mixte</b><span>${anyDone ? "12 exercices sur tout ce que tu as vu" : "Termine une première leçon"}</span></button>
     <button class="rcard" id="weak" ${weakN ? "" : "disabled"}><span class="rk bad">弱</span><b>Mes points faibles</b><span>${weakN ? `${weakN} mot${weakN > 1 ? "s" : ""} à retravailler` : "Rien pour l'instant"}</span></button>
    </div>
+   <h3 class="sect">Fiches récapitulatives</h3>
+   <div class="flist">${UNITS.flatMap(u => u.th).map(t => { const f = ficheStat(t); return `<a class="fcard ${unitOf(t).hue}" href="#fiche-${t}"><span class="tbadge">${DATA[t].k}</span><span class="ginfo"><b>${DATA[t].t}</b><span class="meter"><div style="width:${f.seen / f.total * 100}%"></div></span><span class="d">${f.seen} / ${f.total} mots · ${f.mast} maîtrisés</span></span></a>`; }).join("")}</div>
    <h3 class="sect">Jeux</h3>
    ${games.length ? `<div class="glist">${games.map(t => { const b = store.best[t] || {}; return `<div class="grow ${unitOf(t).hue}"><span class="tbadge">${DATA[t].k}</span><span class="ginfo"><b>${DATA[t].t}</b><span class="d">Records : ♥ ${b.inf || 0} · ⏱ ${b.chr || 0}</span></span><button class="btn" data-g="endless" data-t="${t}" aria-label="Mode infini">♥ Infini</button><button class="btn" data-g="chrono" data-t="${t}" aria-label="Contre-la-montre">⏱ Chrono</button></div>`; }).join("")}</div>`
      : `<div class="empty">Les jeux d'un thème s'ouvrent après ${GAME_AT} leçons terminées.</div>`}
@@ -196,4 +200,35 @@ function viewProfil() {
     try { await gist.connect(t); route(); } catch (e) { $("#g-on").disabled = false; $("#gstat").innerHTML = `<span class="dot err"></span>${esc(e.message)}`; } };
   if ($("#g-now")) $("#g-now").onclick = async () => { await gist.init(); };
   if ($("#g-off")) $("#g-off").onclick = () => { gist.disconnect(); route(); };
+}
+
+/* --- Fiche récapitulative d'un thème : se remplit au fil des leçons --- */
+const MASTER = 3;
+function seenSet(th) { const k = new Set(knownNow(th).map(v => v.jp)); V[th].forEach(v => { if (store.wm[v.jp] !== undefined) k.add(v.jp); }); return k; }
+function ficheStat(th) { const seen = seenSet(th); return { total: V[th].length, seen: seen.size, mast: V[th].filter(v => (store.wm[v.jp] || 0) >= MASTER).length }; }
+function viewFiche(th) {
+  const d = DATA[th], u = unitOf(th), seen = seenSet(th), f = ficheStat(th);
+  const gs = groupsOf(th);
+  const lessonOf = v => gs.findIndex(g => g.includes(v)) + 1;
+  const sents = sentsFor(th, V[th].filter(v => seen.has(v.jp)));
+  const notes = NOTES[th] || [];
+  const card = v => {
+    if (!seen.has(v.jp)) return `<div class="wcard lock"><span class="wq">？</span><span class="small">Nouveaux mots ${lessonOf(v)}</span></div>`;
+    const m = store.wm[v.jp] || 0;
+    return `<button class="wcard ${m >= MASTER ? "mast" : ""}" data-say="${esc(first(v.kana))}">${v.pic ? `<span class="wpic">${pic(v.pic)}</span>` : ""}
+      <b class="wjp">${esc(v.jp)}</b>${v.kana !== v.jp ? `<span class="wk">${esc(v.kana)}</span>` : ""}<span class="wr">${esc(v.ro)}</span><span class="wfr">${esc(v.fr)}</span>
+      <span class="wm" aria-label="Maîtrise ${m} sur 5">${[0, 1, 2, 3, 4].map(i => `<i class="${i < m ? "on" : ""}"></i>`).join("")}</span></button>`;
+  };
+  $("#app").innerHTML = `<a class="back" href="#theme-${th}">← ${esc(d.t)}</a>
+   <section class="thead ${u.hue}"><span class="tbadge big">${d.k}</span><div><span class="eyebrow">Fiche récapitulative</span><h2>${d.t}</h2><div class="small">${f.seen} / ${f.total} mots vus · ${f.mast} maîtrisés</div></div></section>
+   <div class="meter fmeter ${u.hue}"><div style="width:${f.seen / f.total * 100}%"></div></div>
+   ${notes.length ? `<div class="panel notes"><span class="eyebrow">À retenir</span><ul>${notes.map(n => `<li>${esc(n)}</li>`).join("")}</ul></div>` : ""}
+   <h3 class="sect">Vocabulaire</h3>
+   <div class="wgrid">${V[th].map(card).join("")}</div>
+   <p class="small">Un mot est maîtrisé après ${MASTER} bonnes réponses de plus que d'erreurs. Touche un mot pour l'écouter.</p>
+   <h3 class="sect">Phrases</h3>
+   ${sents.length ? `<div class="slist">${sents.map(x => `<div class="bubble">${sentHTML(x.tok)}<div class="srow"><span class="small">${esc(x.fr)}</span>${jaVoice ? `<button class="spk sm" data-say="${esc(x.ka)}" aria-label="Écouter">${SPK}</button>` : ""}</div></div>`).join("")}</div>`
+     : `<div class="empty">Les phrases apparaissent quand tu connais leurs mots.</div>`}
+   <div class="spacer"></div>`;
+  $("#app").querySelectorAll("[data-say]").forEach(b => b.onclick = () => speak(b.dataset.say));
 }

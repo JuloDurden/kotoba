@@ -28,42 +28,71 @@ function speak(t, rate) {
 const SPK = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16 8.5a5 5 0 0 1 0 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
 const MIC = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3" fill="currentColor"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3M8 21h8"/></svg>';
 
-/* --- Effets sonores (générés, aucun fichier) --- */
+/* --- Effets sonores : cordes pincées façon koto, gamme japonaise (aucun fichier audio) --- */
 const sfx = (() => {
-  let ctx = null;
+  let ctx = null, master = null;
+  const cache = {};
   const ac = () => {
     if (!store.settings.sound) return null;
     try {
-      if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
+      if (!ctx) {
+        ctx = new (window.AudioContext || window.webkitAudioContext)();
+        master = ctx.createDynamicsCompressor(); master.connect(ctx.destination);
+      }
       if (ctx.state === "suspended") ctx.resume();
       return ctx;
     } catch (e) { return null; }
   };
-  // note(fréquence, début, durée, type, volume)
+  // Corde pincée (algorithme de Karplus-Strong), mise en cache par hauteur
+  function pluck(c, f, damp) {
+    const key = f + ":" + damp; if (cache[key]) return cache[key];
+    const sr = c.sampleRate, n = Math.floor(sr * 1.6), buf = c.createBuffer(1, n, sr), d = buf.getChannelData(0);
+    const p = Math.max(2, Math.round(sr / f)), ring = new Float32Array(p);
+    for (let i = 0; i < p; i++) ring[i] = (Math.random() * 2 - 1) * (1 - i / p * .5);
+    let k = 0;
+    for (let i = 0; i < n; i++) { const a = ring[k], b = ring[(k + 1) % p]; d[i] = a; ring[k] = (a + b) * .5 * damp; k = (k + 1) % p; }
+    return (cache[key] = buf);
+  }
+  // note : [fréquence, départ (s), volume, amortissement, filtre]
   const play = notes => {
     const c = ac(); if (!c) return;
     const t0 = c.currentTime + .01;
-    notes.forEach(([f, s, d, type = "sine", vol = .18]) => {
-      const o = c.createOscillator(), g = c.createGain();
-      o.type = type; o.frequency.setValueAtTime(f, t0 + s);
-      g.gain.setValueAtTime(0, t0 + s);
-      g.gain.linearRampToValueAtTime(vol, t0 + s + .015);
-      g.gain.exponentialRampToValueAtTime(.0001, t0 + s + d);
-      o.connect(g).connect(c.destination);
-      o.start(t0 + s); o.stop(t0 + s + d + .05);
+    notes.forEach(([f, s, vol = .5, damp = .996, cut = 4200]) => {
+      const src = c.createBufferSource(), g = c.createGain(), lp = c.createBiquadFilter();
+      src.buffer = pluck(c, f, damp); lp.type = "lowpass"; lp.frequency.value = cut;
+      g.gain.value = vol; src.connect(lp).connect(g).connect(master); src.start(t0 + s);
     });
   };
+  // Bloc de bois (claves) pour les clics
+  const wood = (f = 1700, vol = .25) => {
+    const c = ac(); if (!c) return;
+    const t = c.currentTime + .005, o = c.createOscillator(), g = c.createGain();
+    o.type = "sine"; o.frequency.setValueAtTime(f, t); o.frequency.exponentialRampToValueAtTime(f * .6, t + .05);
+    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(.0001, t + .07);
+    o.connect(g).connect(master); o.start(t); o.stop(t + .09);
+  };
+  // Tambour grave (taiko) pour les grands moments
+  const taiko = (vol = .7) => {
+    const c = ac(); if (!c) return;
+    const t = c.currentTime + .005, o = c.createOscillator(), g = c.createGain();
+    o.type = "sine"; o.frequency.setValueAtTime(120, t); o.frequency.exponentialRampToValueAtTime(45, t + .35);
+    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(.0001, t + .5);
+    o.connect(g).connect(master); o.start(t); o.stop(t + .55);
+  };
+  // Gammes : yō (lumineuse) pour les réussites, miyako-bushi (mélancolique) pour les erreurs
+  const Y = { D4: 293.7, E4: 329.6, G4: 392, A4: 440, B4: 493.9, D5: 587.3, E5: 659.3, G5: 784, A5: 880, B5: 987.8, D6: 1174.7 };
+  const M = { D3: 146.8, Eb3: 155.6, G3: 196, A3: 220, Bb3: 233.1, D4: 293.7 };
   return {
-    tap:    () => play([[660, 0, .06, "triangle", .08]]),
-    ok:     () => play([[784, 0, .12, "triangle"], [1175, .09, .22, "triangle"]]),
-    ko:     () => play([[220, 0, .18, "sawtooth", .09], [165, .12, .26, "sawtooth", .08]]),
-    match:  () => play([[880, 0, .08, "sine", .12]]),
-    miss:   () => play([[180, 0, .15, "square", .06]]),
-    lose:   () => play([[392, 0, .14, "triangle"], [311, .12, .14, "triangle"], [233, .24, .3, "triangle"]]),
-    done:   () => play([[523, 0, .14, "triangle"], [659, .12, .14, "triangle"], [784, .24, .14, "triangle"], [1047, .36, .4, "triangle"]]),
-    record: () => play([[523, 0, .1], [659, .1, .1], [784, .2, .1], [1047, .3, .18], [784, .48, .1], [1047, .58, .5]]),
-    tick:   () => play([[1200, 0, .03, "square", .04]]),
-    micOn:  () => play([[600, 0, .07, "sine", .1], [900, .07, .09, "sine", .1]])
+    tap:    () => wood(1800, .18),
+    ok:     () => play([[Y.A5, 0, .45], [Y.D6, .09, .5]]),
+    ko:     () => play([[M.A3, 0, .55, .993, 1400], [M.Eb3, .13, .6, .992, 1100]]),
+    match:  () => play([[Y.G5, 0, .35, .995]]),
+    miss:   () => play([[M.Bb3, 0, .45, .99, 900]]),
+    lose:   () => { play([[M.D4, 0, .5, .994, 1500], [M.Bb3, .16, .5, .994, 1400], [M.A3, .32, .5, .994, 1300], [M.Eb3, .5, .6, .993, 1100]]); },
+    done:   () => { play([[Y.D5, 0], [Y.E5, .1], [Y.G5, .2], [Y.A5, .3], [Y.D6, .42, .6]]); setTimeout(() => taiko(.5), 420); },
+    record: () => { taiko(); play([[Y.D5, .05], [Y.G5, .15], [Y.A5, .25], [Y.D6, .35], [Y.B5, .5], [Y.D6, .62, .6]]); setTimeout(() => taiko(.6), 620); },
+    tick:   () => wood(2400, .08),
+    micOn:  () => play([[Y.E5, 0, .3, .99], [Y.A5, .08, .3, .99]])
   };
 })();
 
@@ -96,10 +125,10 @@ const SR = (() => {
 })();
 const SR_MSG = {
   "not-allowed": "Micro refusé. Autorise le micro pour ce site dans les réglages du navigateur.",
-  "service-not-allowed": "Micro refusé. Autorise le micro pour ce site dans les réglages du navigateur.",
+  "service-not-allowed": "Ce navigateur bloque le service de reconnaissance vocale (c'est le cas de Vivaldi ou Brave). Utilise Edge, Chrome ou Safari.",
   "no-speech": "Je n'ai rien entendu. Rapproche-toi du micro et réessaie.",
   "audio-capture": "Aucun micro détecté.",
-  "network": "La reconnaissance vocale a besoin d'Internet.",
+  "network": "Le service de reconnaissance vocale est injoignable. Certains navigateurs (Vivaldi, Brave, Opera) le bloquent : utilise Edge, Chrome ou Safari.",
   "unsupported": "Ce navigateur ne propose pas la reconnaissance vocale (utilise Chrome, Edge ou Safari).",
   "busy": "Le micro est déjà en cours d'utilisation.",
   "error": "La reconnaissance vocale a échoué. Réessaie."

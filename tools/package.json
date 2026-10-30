@@ -1,0 +1,13 @@
+{
+  "name": "kotoba-tools",
+  "private": true,
+  "type": "module",
+  "description": "Scripts de génération des ressources de Kotoba (silhouettes de pays, icônes)",
+  "scripts": { "geo": "node build-geo.mjs", "icons": "node build-icons.mjs" },
+  "dependencies": {
+    "d3-geo": "3.1.1",
+    "flag-icons": "7.2.3",
+    "topojson-client": "3.1.0",
+    "world-atlas": "2.0.2"
+  }
+}

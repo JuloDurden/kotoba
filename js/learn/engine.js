@@ -50,7 +50,7 @@ const G={
   return {type:"mcq",title:"Que signifie ce mot ?",prompt:`<div><div class="pjp">${esc(v.jp)}</div><div class="paid">${aid(v.jp,v.kana,v.ro,"pk")}</div></div>`,speak:first(v.kana),
    options:o.map(x=>({html:esc(x.fr),val:x.fr})),answer:v.fr,reveal:revV(v),key:v.jp};},
  mcq_fr(ctx,v){v=v||pickV(ctx);if(!v)return null;const o=shuffle([v,...others(ctx,v,"jp",3)]);
-  return {type:"mcq",title:`Comment dit-on « ${esc(v.fr)} » ?`,prompt:v.pic?pic(v.pic):"",two:true,options:o.map(x=>({html:jpOpt(x),val:x.jp})),answer:v.jp,reveal:revV(v),key:v.jp,speakAfter:first(v.kana)};},
+  return {type:"mcq",title:"Comment dit-on en japonais ?",prompt:`<div class="pfr big">${esc(v.fr)}</div>`,two:true,options:o.map(x=>({html:jpOpt(x),val:x.jp})),answer:v.jp,reveal:revV(v),key:v.jp,speakAfter:first(v.kana)};},
  img(ctx,v){const hasPic=x=>!!x.pic;v=v&&v.pic?v:pickV(ctx,hasPic);if(!v)return G.mcq_jp(ctx);
   const o=others(ctx,v,"pic",3,hasPic);if(o.length<2)return G.mcq_jp(ctx,v);
   return {type:"mcq",title:"Sélectionne la bonne image",prompt:`<div><div class="pjp">${esc(v.jp)}</div><div class="paid">${aid(v.jp,v.kana,v.ro,"pk")}</div></div>`,speak:first(v.kana),two:true,pics:true,
@@ -76,7 +76,7 @@ const G={
   return {type:"mcq",title:"Complète la phrase",prompt:`<div class="bubble">${sentHTML(s.tok,i)}<div class="small">${esc(s.fr)}</div></div>`,
    options:o.map(x=>({html:tokOpt(x),val:x})),answer:ans,reveal:revS(s),speakAfter:s.ka,key:"s:"+s.fr};},
  type(ctx){const v=pickV(ctx,typable);if(!v)return null;
-  return {type:"type",title:"Écris en japonais",sub:"En kana ou en rōmaji",prompt:`<div class="prompt">${pic(v.pic)}<div class="pfr">${esc(v.fr)}</div></div>`,answers:[...alts(v.ro),...alts(v.kana),...alts(v.jp)],reveal:revV(v),speakAfter:first(v.kana),key:v.jp};},
+  return {type:"type",title:"Écris en japonais",sub:"En kana ou en rōmaji",prompt:`<div class="pfr big">${esc(v.fr)}</div>`,answers:[...alts(v.ro),...alts(v.kana),...alts(v.jp)],reveal:revV(v),speakAfter:first(v.kana),key:v.jp};},
  read(ctx){const v=pickV(ctx,x=>typable(x)&&x.kana!==x.jp);if(!v)return G.type(ctx);
   return {type:"type",title:"Lis ce mot",sub:"Écris sa lecture en rōmaji",prompt:`<div><div class="pjp">${esc(v.jp)}</div>${store.help.kana?`<div class="pk">${esc(v.kana)}</div>`:""}</div>`,answers:[...alts(v.ro),...alts(v.kana)],reveal:revV(v),speakAfter:first(v.kana),key:v.jp};},
  num_read(ctx){const max=numMax(ctx);if(!max)return null;const n=randNum(max);const r=numRead(n);const o=new Set([n]);let guard=0;
@@ -98,6 +98,13 @@ function pickC(ctx,f=()=>true){
   pool=shuffle(pool).sort((a,b)=>sc(a.c)-sc(b.c));const x=rnd(pool.slice(0,Math.max(3,Math.ceil(pool.length/2))));ctx.u.add(x.c);return x;}
 function cOthers(ctx,x,n){const key=c=>cVal(ctx.s,c);const seen=new Set([key(x)]),out=[];
   for(const o of shuffle(ctx.pool).concat(shuffle(SCR[ctx.s].list))){if(!seen.has(key(o))&&o.c!==x.c){seen.add(key(o));out.push(o);}if(out.length>=n)break;}return out;}
+/* Mots du vocabulaire qui contiennent un caractère donné */
+function wordOf(s,v){
+  if(s==="hira"){const w=first(v.kana);return /^[\u3040-\u309F]+$/.test(w)?{w,kana:w,ro:first(v.ro),fr:v.fr,say:w}:null;}
+  if(s==="kata")return /^[\u30A0-\u30FF]+$/.test(v.jp)?{w:v.jp,kana:v.jp,ro:first(v.ro),fr:v.fr,say:v.jp}:null;
+  return /[\u4E00-\u9FFF]/.test(v.jp)?{w:v.jp,kana:first(v.kana),ro:first(v.ro),fr:v.fr,say:first(v.kana)}:null;}
+const uniqW=l=>{const seen=new Set();return l.filter(w=>!seen.has(w.w)&&seen.add(w.w));};
+function wordsWith(s,c){return uniqW(ALLV.map(v=>wordOf(s,v)).filter(w=>w&&w.w.includes(c)&&w.w!==c)).sort((a,b)=>a.w.length-b.w.length);}
 const KG={
  intro(ctx,x){return {type:"kintro",x,s:ctx.s,speak:cSay(ctx.s,x)};},
  ch2ro(ctx,x){x=x||pickC(ctx);const o=shuffle([x,...cOthers(ctx,x,3)]);const k=isKanji(ctx.s);
@@ -119,6 +126,20 @@ const KG={
    sub:guide?"Repasse sur le modèle avec la souris ou le doigt":(k?`Lecture : ${esc(x.kana)}`:`En ${SCR[ctx.s].name.toLowerCase()}`),reveal:cRev(ctx.s,x),ch:x.c,speakAfter:cSay(ctx.s,x)};},
  type(ctx,x){x=x||pickC(ctx);const k=isKanji(ctx.s);
   return {type:"type",title:k?"Écris la lecture de ce kanji":"Écris le son de ce caractère",sub:"En rōmaji",prompt:`<div class="pjp" style="font-size:4rem">${esc(x.c)}</div>`,answers:k?[...alts(x.ro),...alts(x.kana)]:[x.ro,x.c],reveal:cRev(ctx.s,x),ch:x.c,speakAfter:cSay(ctx.s,x)};},
+ miss(ctx,x){const W=x?wordsWith(ctx.s,x.c):null;let w=W&&W.length?rnd(W):null;
+  if(!w){const cands=shuffle(ctx.pool).map(y=>[y,wordsWith(ctx.s,y.c)]).filter(([,l])=>l.length);if(!cands.length)return null;const [y,l]=cands[0];x=y;w=rnd(l);}
+  const at=w.w.indexOf(x.c);if(at<0)return null;const gap=w.w.slice(0,at)+'<span class="gapc"></span>'+w.w.slice(at+x.c.length);
+  const o=shuffle([x,...cOthers(ctx,x,3)]);
+  return {type:"mcq",title:"Quel caractère manque dans ce mot ?",prompt:`<div class="wordbox"><div class="pjp">${gap}</div><div class="paid">${aid("",w.kana,w.ro,"pk")}</div><div class="pfr">${esc(w.fr)}</div></div>`,two:true,
+   options:o.map(y=>({html:`<span class="ojp big">${esc(y.c)}</span>`,val:y.c})),answer:x.c,reveal:`<span class="j">${esc(w.w)}</span> · ${esc(w.ro)} = ${esc(w.fr)}`,ch:x.c,speakAfter:w.say};},
+ drawIn(ctx,x){x=x||pickC(ctx,y=>wordsWith(ctx.s,y.c).length);if(!x)return null;const W=wordsWith(ctx.s,x.c);if(!W.length)return null;const w=rnd(W);const at=w.w.indexOf(x.c);
+  const e=KG.draw(ctx,x,false);e.title="Écris le caractère manquant";e.sub="";e.context=`<div class="wordbox"><div class="pjp">${w.w.slice(0,at)}<span class="gapc"></span>${w.w.slice(at+x.c.length)}</div><div class="paid">${aid("",w.kana,w.ro,"pk")}</div><div class="pfr">${esc(w.fr)}</div></div>`;
+  e.reveal=`<span class="j">${esc(w.w)}</span> · ${esc(w.ro)} = ${esc(w.fr)}`;e.speakAfter=w.say;return e;},
+ compose(ctx){if(isKanji(ctx.s))return null;const have=new Set(ctx.pool.map(y=>y.c));const comb=ctx.pool.some(y=>y.c.length>1),big=ctx.pool.length>=20;
+  const ok=w=>[...w].every(ch=>have.has(ch)||(comb&&/[ゃゅょャュョ]/.test(ch))||(big&&/[っッー]/.test(ch)));
+  const W=uniqW(ALLV.map(v=>wordOf(ctx.s,v)).filter(w=>w&&w.w.length>=2&&w.w.length<=6&&ok(w.w)));if(!W.length)return null;const w=rnd(W);
+  const chars=[...w.w];const dis=shuffle(ctx.pool.map(y=>y.c).filter(c=>c.length===1&&!chars.includes(c))).slice(0,3);
+  return {type:"build",lang:"jp",kana:true,title:`Écris « ${esc(w.fr)} »`,fr:w.fr,sub:store.help.ro?`Lecture : ${esc(w.ro)}`:"",tiles:shuffle([...chars,...dis]),answer:w.w,sep:"",reveal:`<span class="j">${esc(w.w)}</span> · ${esc(w.ro)} = ${esc(w.fr)}`,speakAfter:w.say};},
  word(ctx){if(isKanji(ctx.s))return null;const known=new Set(ctx.pool.flatMap(x=>[...x.c]));const big=ctx.pool.length>=20;
   const ok=w=>[...w].every(ch=>known.has(ch)||(big&&/[っッー]/.test(ch)));
   const cand=ALLV.filter(v=>{const w=ctx.s==="hira"?first(v.kana):v.jp;if(ctx.s==="kata"&&!/^[゠-ヿ]+$/.test(v.jp))return false;if(ctx.s==="hira"&&!/^[぀-ゟ]+$/.test(w))return false;return w.length>=2&&ok(w);});
@@ -147,10 +168,11 @@ function buildLesson(spec){
       S.forEach(x=>{q.push(KG.intro(ctx,x),KG.draw(ctx,x,true),KG.ch2ro(ctx,x));});
       q.push(KG.pairs(ctx));shuffle(S).slice(0,2).forEach(x=>q.push(KG.ro2ch(ctx,x)));
       if(isKanji(s))shuffle(S).slice(0,2).forEach(x=>q.push(KG.kread(ctx,x)));else q.push(KG.listen(ctx,rnd(S)));
-      q.push(KG.draw(ctx,rnd(S),false),KG.type(ctx,rnd(S)));
+      shuffle(S).slice(0,2).forEach(x=>q.push(KG.miss(ctx,x)));
+      q.push(KG.compose(ctx),KG.draw(ctx,rnd(S),false),KG.drawIn(ctx),KG.type(ctx,rnd(S)));
       return q.filter(Boolean);}
     const ctx={s,pool:intro,u:new Set()};
-    const q=[KG.ch2ro(ctx),KG.ro2ch(ctx),KG.pairs(ctx),KG.listen(ctx),KG.draw(ctx,null,false),KG.type(ctx),KG.word(ctx),KG.ch2ro(ctx),KG.draw(ctx,null,false),KG.ro2ch(ctx),isKanji(s)?KG.kread(ctx):KG.word(ctx),KG.type(ctx)];
+    const q=[KG.ch2ro(ctx),KG.ro2ch(ctx),KG.pairs(ctx),KG.listen(ctx),KG.draw(ctx,null,false),KG.type(ctx),KG.word(ctx),KG.ch2ro(ctx),KG.miss(ctx),KG.compose(ctx),KG.drawIn(ctx),KG.draw(ctx,null,false),KG.ro2ch(ctx),KG.miss(ctx),isKanji(s)?KG.kread(ctx):KG.word(ctx),KG.type(ctx)];
     return q.filter(Boolean);}
   if(m==="endless"||m==="chrono"){const ctx=themeCtx(spec.th,knownNow(spec.th));return [gameEx(spec,ctx)].filter(Boolean);}
   const th=spec.th,lesson=spec.lesson;

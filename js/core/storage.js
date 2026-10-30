@@ -7,7 +7,7 @@ const GIST_DESC = "Kotoba : sauvegarde (ne pas renommer)";
 const GIST_FILE = "kotoba-save.json";
 
 const DEF = () => ({
-  v: 2, xp: 0, prog: {}, weak: {}, best: {}, days: [],
+  v: 3, xp: 0, prog: {}, weak: {}, wm: {}, best: {}, days: [],
   help: { ro: true, kana: true },
   settings: { sound: true, voiceRate: 1 },
   ch: { hira: {}, kata: {}, kanji: {} },
@@ -15,7 +15,7 @@ const DEF = () => ({
 });
 function fix(o) {
   const d = DEF(); o = Object.assign(d, o || {});
-  ["prog", "weak", "best"].forEach(k => { if (!o[k] || typeof o[k] !== "object") o[k] = {}; });
+  ["prog", "weak", "wm", "best"].forEach(k => { if (!o[k] || typeof o[k] !== "object") o[k] = {}; });
   if (!Array.isArray(o.days)) o.days = [];
   o.help = Object.assign({ ro: true, kana: true }, o.help || {});
   o.settings = Object.assign({ sound: true, voiceRate: 1 }, o.settings || {});
